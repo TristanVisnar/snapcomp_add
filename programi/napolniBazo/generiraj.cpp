@@ -13,16 +13,16 @@ const int width = 600, height = 400;
 int main(int argc, char ** argv) {
 	if (argc != 2) {
 		cout << "Napaka klicu aplikacije" << endl;
-		system("pause");
 		return -1;
 	}
 
-	for (int i = 0; i < stoi(argv[1]); i++) {
+	for (int i = 0; i < atoi(argv[1]); i++) {
 		srand(i*(1484011024*(18+i))% 4294967295);
 		stringstream ss;
-		ss << "ppm/picture" << i << ".ppm";
+		ss << "./ppm/picture" << i << ".ppm";
 		string ime = ss.str();
-		ofstream img(ime);
+		ofstream img;
+		img.open(ime, ios::out | ios::trunc);
 		img << "P3" << endl;
 		img << width << " " << height << endl;
 		img << "255" << endl;
@@ -38,6 +38,5 @@ int main(int argc, char ** argv) {
 		}
 		img.close();
 	}
-	system("pause");
 	return 0;
 }

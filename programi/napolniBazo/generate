@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# -eq 1 ]
+then
+ ./test "$1" 
+ convert ppm/*.ppm png/image%d.png  
+else
+ echo "Napaka: manjka ime datoteke";
+fi
+
