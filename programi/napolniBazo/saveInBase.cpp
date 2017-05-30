@@ -1,6 +1,15 @@
 
 #include <iostream>
-#include <mysql/mysql.h>
+
+//#include <mysql/mysql.h>
+#include <mysql_connection.h>
+#include <cppconn/driver.h>
+#include <cppconn/exception.h>
+#include <cppconn/resultset.h>
+#include <cppconn/statement.h>
+#include <cppconn/prepared_statement.h>
+
+#include <exception>
 #include <time.h>
 #include <stdlib.h>
 #include <string>
@@ -9,7 +18,11 @@
 
 using namespace std;
 
+
 char table[] = "aeiou";
+char ostale[] = "bcdfghjklmnprstvz";
+string countryList[] = { "Andorra", "Austria" , "Belgium" , "China" , "Egipt" , "Finland", "France", "Germany" , "Greece" , "Hungary", "India", "India","Iraq","Japan","Italy","Libya","Mexico","Niger","Poland","Peru","Russa","Slovenia","Spani","Sweden","United States of America","United Kingdom"};
+
 
 int getRandomLength(int min, int max){
 	//min 3 max 10 za besede
@@ -33,8 +46,8 @@ string ustvariBesedo() {
 				beseda +=table[crka];
 			}
 			else {
-				crka = getRandomLength(97, 123);
-				beseda += (char)crka;
+				crka = getRandomLength(0, 21);
+				beseda += ostale[crka];
 			}
 		}
 		else {
@@ -43,8 +56,8 @@ string ustvariBesedo() {
 				beseda += table[crka];
 			}
 			else {
-				crka = getRandomLength(97, 123);
-				beseda += (char)crka;
+				crka = getRandomLength(0, 21);
+				beseda += ostale[crka];
 			}
 		}
 	}
@@ -70,12 +83,13 @@ string ustvariBesedilo() {
 	return besedilo;
 }
 
+
 string ustvariCas(){
 	stringstream ss;
-	int tmp = getRandomLength(0,25);
+	int tmp = getRandomLength(0,24);
 	if (tmp < 10)
-		ss << "0" << ":";
-	ss << tmp;
+		ss << "0";
+	ss << tmp<< ":";
 	tmp = getRandomLength(0, 60);
 	if (tmp < 10)
 		ss << "0";
@@ -94,7 +108,7 @@ string ustvariDatum() {
 	if (tmp < 10)
 		ss << "0";
 	ss << tmp <<"-";
-	tmp = getRandomLength(0, 29);
+	tmp = getRandomLength(1, 29);
 	if (tmp < 10)
 		ss << "0";
 	ss << tmp;
@@ -121,40 +135,58 @@ int izberiGender() {
 
 
 int main(int argc, char ** argv ) {
-	if (argc != 1) {
+	if (argc != 2) {
 		return -1;
 	}
 	int stSlik = atoi(argv[1]);
-	int stUporabnikov = stSlik / 4;
+	int stUporabnikov = stSlik / 4 + 2;
 	srand(time(NULL));
 
-
-	MYSQL *conn;
-	MYSQL_RES *res;
-	MYSQL_ROW row;
-
-	char *server = "localhost";
-	char *user = "user";
-	//set the password for mysql server here
-	char *password = "joomladb"; /* set me first */
-	char *database = "snapcomp";
-
-	conn = mysql_init(NULL);
-
-	/* Connect to database */
-	if (!mysql_real_connect(conn, server,
-		user, password, database, 0, NULL, 0)) {
-		fprintf(stderr, "%s\n", mysql_error(conn));
-		exit(1);
+	sql::Driver *driver;
+	try{
+	driver = get_driver_instance();
+	}
+	catch(int &e){
+	 cout<<"ERROR IN DRIVER"<<endl;
 	}
 
 
+	cout<<"driver ... ok"<<endl;
+
+	sql::Connection *conn;
+
+	string server = "localhost";
+	string user = "user";
+	//set the password for mysql server here
+	string password = "joomladb"; /* set me first */
+	string database = "snapcomp";
 
 
-	sql::PreparedStatement  *prep_stmt;
 
-	prep_stmt = conn->prepareStatement("INSERT into UPORABNIK (EMAIL,ACCNAME,USERNAME,PASS,DATEOFBIRTH,FIRSTNAME,SURNAME,LANG,GENDER,NUMOFPOSTS,NUMOFWINS) Values (?,?,?,?,?,?,?,?,?,?,?);");
+	/* Connect to database */
+	try{
+	 conn = driver->connect(server,user,password);
+	}
+	catch(int &e){
+	 cout << "ERROR IN MYSQL CONNECT" << endl;
+	}
 
+	cout << "mysql connection ... ok"<<endl;
+	try{
+	 conn->setSchema(database);
+	}
+	catch(int &e){
+	 cout<< "ERROR IN DATABASE CONNECTION" << endl;
+	}
+	cout <<"database connection ... ok" <<endl;
+
+
+
+	sql::PreparedStatement *prep_stmt;
+
+	try{
+	prep_stmt = conn->prepareStatement("INSERT into UPORABNIK (EMAIL,ACCNAME,USERNAME,PASS,DATEOFBIRTH,FIRSTNAME,SURNAME,LANG,GENDER,NUMOFPOSTS,NUMOFWINS,COUNTRY) Values (?,?,?,?,?,?,?,?,?,?,?,?);");
+	cout<<"Start adding users"<<endl;
 	for (int i = 0; i < stUporabnikov; i++) {
 		prep_stmt->setString(1, ustvariMail());
 		string user = ustvariUsername();
@@ -173,53 +205,60 @@ int main(int argc, char ** argv ) {
 		prep_stmt->setInt(10, getRandomLength(0, 1000));
 		prep_stmt->setInt(11, getRandomLength(0, 1000));
 
+		prep_stmt->setString(12, countryList[getRandomLength(0,26)]);
+
 		prep_stmt->execute();
 	}
-	
+	cout << "End adding users ... ok" <<endl;
+	}
+        catch(int &e){
+	 cout<< "ERROR IN PREPARE STATEMENT" << endl;
+	}
 	delete prep_stmt;
 
-	sql::PreparedStatement  *prep_stmt;
 
-	prep_stmt = conn->prepareStatement("INSERT INTO PICTURE(DESCRIPTION,CONTENT,DATEOFUPLOAD,ID_USER,ID_SUGGESTION,LIKES,DISLIKES,NSFW) VALUES (?,?,?,?, ?,?,?,?)");
-
-	ofstream file;
+	prep_stmt = conn->prepareStatement("INSERT INTO PICTURE(DESCRIPTION,CONTENT,DATEOFUPLOAD,ID_USER,ID_SUGGESTION,LIKES,DISLIKES,NSFW) VALUES (?,?,?,?,?,?,?,?)");
+	cout << "Start adding picture "<<endl;
+	ifstream file;
 	string ime;
 	for (int i = 0; i < stSlik; i++) {
 		prep_stmt->setString(1, ustvariBesedilo());
+
 
 		//blob od slike
 		stringstream ss;
 		ss<< "png/image"<< i <<".png";
 		ime = ss.str();
-		file.open(ime, ios::binary | ios::in );
-		//stringstream ss;
-		//ss << file.rdbuf();
-		prep_stmt->setString(2, file.rdbuf());
+		file.open(ime.c_str(), ios::binary |ios::in);
+
+		//stringstream sd;
+		//sd << file.rdbuf();
+		prep_stmt->setBlob(2,&file);
 
 
-		prep_stmt->setString(3, ustvariTimestamp());
 
-		prep_stmt->setint(4, getRandomLength(0, stUporabnikov));
-		prep_stmt->setint(5, getRandomLength(0,100));		///////   VSTAVI KOLIKO SUGGESTIONOV BO
-		prep_stmt->setint(6, getRandomLength(0, 1000));
-		prep_stmt->setint(7, getRandomLength(0, 1000));
-		prep_stmt->setint(8, getTrueFalse());
+		prep_stmt->setString(3,ustvariTimestamp());
+
+		prep_stmt->setInt(4, getRandomLength(1, stUporabnikov));
+
+		prep_stmt->setInt(5, getRandomLength(1,301));		///////   VSTAVI KOLIKO SUGGESTIONOV BO
+
+		prep_stmt->setInt(6, getRandomLength(0, 1000));
+
+		prep_stmt->setInt(7, getRandomLength(0, 1000));
+
+		prep_stmt->setInt(8, getTrueFalse());
+
 		prep_stmt->execute();
 
+		file.close();
+
 	}
-	
+
+	cout <<"End adding picture" <<endl;
+	cout << "Adding completed succesfuly" <<endl;
+
 	delete prep_stmt;
-	
 
-	/*
-	res = mysql_use_result(conn);
-
-	// output table name 
-	printf("MySQL Tables in mysql database:\n");
-	while ((row = mysql_fetch_row(res)) != NULL)
-		printf("%s \n", row[0]);
-	*/
-
-	mysql_close(conn);
 	delete conn;
 }

@@ -8,7 +8,7 @@
 
 using namespace std;
 
-const int width = 600, height = 400;
+const int width = 255, height = 255;
 
 int main(int argc, char ** argv) {
 	if (argc != 2) {
@@ -16,23 +16,37 @@ int main(int argc, char ** argv) {
 		return -1;
 	}
 
+	srand(time(NULL));
+	int tmp = 0;
+	int tmp2 = 1;
+	int tmp3 = 2;
 	for (int i = 0; i < atoi(argv[1]); i++) {
-		srand(i*(1484011024*(18+i))% 4294967295);
 		stringstream ss;
 		ss << "./ppm/picture" << i << ".ppm";
 		string ime = ss.str();
 		ofstream img;
-		img.open(ime, ios::out | ios::trunc);
+		img.open(ime.c_str(), ios::out | ios::trunc);
 		img << "P3" << endl;
 		img << width << " " << height << endl;
 		img << "255" << endl;
+		tmp = rand();
+		tmp2 = rand();
+		tmp3 = rand();
 
 		for (int y = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
-				int r = rand() % 255;
-				int g = rand() % 255;
-				int b = rand() % 255;
 
+				int r,g,b;
+				if(rand()%2==0){
+				r = x*tmp % 255;
+				g = y*tmp2 % 255;
+				b = x*y*tmp3 % 255;
+				}
+				else{
+				r = x+tmp % 255;
+				g = y+tmp2 % 255;
+				b = (x+tmp)*(y+tmp2)+tmp3 %255;
+				}
 				img << r << " " << g << " " << b << endl;
 			}
 		}
